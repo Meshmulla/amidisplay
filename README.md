@@ -25,7 +25,7 @@ Everything else (verse matching, the console, the projector looks) is the same c
 
 **Install**
 
-1. Download `FlashDisplay-Setup.exe` from this repo's **Releases** page (or from the latest run under **Actions → Windows installer**).
+1. Download `FlashDisplay-Setup.exe` from this repo's **Releases** page, or from the latest run under **Actions → Windows installer** (scroll to "Artifacts").
 2. Run it. Windows may warn that the app is from an unknown publisher; choose **More info → Run anyway**. (The installer isn't code-signed yet.)
 3. Open FlashDisplay, go to **Settings**, and press **Download Accurate**. It's a one-time download of about 480 MB. After that, the internet can be switched off.
 
@@ -48,7 +48,7 @@ Copy it to the media laptop on a USB stick, then in **Settings** choose **Instal
 - The ring around the Listen dot moves with the sound level, so you can see the preacher is being heard.
 - Words appear about a second after each sentence, slightly later than the web version, then verses show up the same way.
 
-**Building the installer yourself:** push a tag like `v0.2.0`, and the **Windows installer** workflow in `.github/workflows/desktop.yml` builds it and attaches it to a release. Locally on Windows: `npm ci` then `npm run dist:win`.
+**Building the installer:** every push to main builds it (see **Actions → Windows installer**). To publish one, create a release on GitHub (Releases → Draft a new release, tag `v0.2.0`); the workflow attaches the installer to it. Locally on Windows: `npm ci` then `npm run dist:win`.
 
 ## Web version: running it on the media laptop
 
