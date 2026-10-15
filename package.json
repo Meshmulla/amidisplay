@@ -1,11 +1,66 @@
 {
   "name": "flashdisplay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Live sermon transcription that finds the Bible verse being preached and puts it on screen in KJV.",
   "scripts": {
     "start": "node tools/serve.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "desktop": "electron .",
+    "dist:win": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "sherpa-onnx-node": "^1.13.8",
+    "tar": "^7.5.22",
+    "unbzip2-stream": "^1.4.3"
+  },
+  "main": "desktop/main.cjs",
+  "author": "FlashDisplay",
+  "build": {
+    "appId": "app.flashdisplay.desktop",
+    "productName": "FlashDisplay",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "display.html",
+      "src/**",
+      "assets/**",
+      "data/**",
+      "desktop/**",
+      "package.json",
+      "!node_modules/sherpa-onnx-linux-*/**",
+      "!node_modules/sherpa-onnx-darwin-*/**",
+      "!node_modules/sherpa-onnx-win-ia32/**"
+    ],
+    "asarUnpack": [
+      "desktop/**",
+      "node_modules/sherpa-onnx-*/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "FlashDisplay",
+      "artifactName": "FlashDisplay-Setup-${version}.exe"
+    }
   }
 }

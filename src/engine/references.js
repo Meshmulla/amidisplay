@@ -119,10 +119,15 @@ function parseAfterBook(toks, j, book, bible) {
   else {
     while (toks[v] && (toks[v].t === "," || FILLER.has(toks[v].t))) v++;
     if (toks[v] && VERSE_WORDS.has(toks[v].t)) { sawVerseWord = true; v++; }
-    else v = k; // bare number directly after chapter: "John 3 16"
+    else {
+      // bare number directly after chapter: "John 3 16", or "Romans 8, 28"
+      v = k;
+      while (toks[v] && toks[v].t === ",") v++;
+      if (num(toks[v]) === null) v = k;
+    }
   }
   const verse = sawVerseWord || toks[v - 1]?.t === ":" ? slotNum(toks[v]) : toks[v]?.t === "tree" ? 3 : num(toks[v]);
-  if (verse !== null && verse >= 1 && verse <= verseCount(bible, book, chapter) && (sawVerseWord || v === k || toks[v - 1].t === ":")) {
+  if (verse !== null && verse >= 1 && verse <= verseCount(bible, book, chapter) && (sawVerseWord || v === k || toks[v - 1].t === ":" || toks[v - 1].t === ",")) {
     const ref = { book, chapter, verse, endVerse: verse, kind: "explicit", end: toks[v].end };
     const r = parseRange(toks, v + 1, ref, bible);
     return { ref: r.ref, next: r.next, hadNumberRightAway };

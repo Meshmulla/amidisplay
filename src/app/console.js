@@ -6,6 +6,11 @@ import { SUGGEST_AT, STRONG_AT } from "../engine/thresholds.js";
 import { Listener, Rehearsal, speechSupported, SAMPLE_SERMON } from "./speech.js";
 import { openChannel, DEFAULT_LOOK } from "./channel.js";
 import { escapeHtml, verseHtml } from "./render.js";
+import { desktop, OfflineListener, listMicrophones } from "./offline.js";
+
+// The desktop app listens offline with a model on this laptop; the web version uses Chrome.
+if (desktop) document.documentElement.classList.add("is-desktop");
+const canListen = () => Boolean(desktop) || speechSupported();
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -17,6 +22,7 @@ const els = {
   prev: $("prev-verse"), next: $("next-verse"), clearScreen: $("clear-screen"), copyLive: $("copy-live"),
   copyTranscript: $("copy-transcript"), saveSession: $("save-session"),
   search: $("search"), results: $("results"), toast: $("toast"), tpl: $("tpl-suggestion"),
+  models: $("models"), importModel: $("import-model"), setMic: $("set-mic"), setScreen: $("set-screen"),
   setLang: $("set-lang"), setAuto: $("set-auto"), setTheme: $("set-theme"), setScale: $("set-scale"), setVersion: $("set-version"),
 };
 
@@ -27,6 +33,9 @@ const SETTINGS_KEY = "flashdisplay:settings";
 const settings = {
   lang: "en-NG",
   auto: "off",
+  model: "accurate",
+  micId: "",
+  screenId: null,
   look: { ...DEFAULT_LOOK },
   ...loadSettings(),
 };
@@ -74,14 +83,14 @@ worker.onmessage = (e) => {
   } else if (msg.type === "bible") {
     bible = new Bible({ books: msg.books, kjv: msg.kjv });
     els.search.disabled = false;
-    els.listen.disabled = !speechSupported();
-    setStatus(speechSupported() ? "Spoken references ready. Matching quotes in a moment." : "This browser can't listen. Open FlashDisplay in Google Chrome.", speechSupported() ? "" : "warn");
+    els.listen.disabled = !canListen();
+    setStatus(canListen() ? "Spoken references ready. Matching quotes in a moment." : "This browser can't listen. Open FlashDisplay in Google Chrome.", canListen() ? "" : "warn");
     pushScreen();
   } else if (msg.type === "ready") {
     ready = true;
     els.sample.disabled = false;
     els.loading.remove();
-    if (!listener.want && !rehearsal.playing) setStatus(speechSupported() ? "Ready when the preacher is." : "This browser can't listen. Open FlashDisplay in Google Chrome.", speechSupported() ? "" : "warn");
+    if (!listener.want && !rehearsal.playing) setStatus(canListen() ? "Ready when the preacher is." : "This browser can't listen. Open FlashDisplay in Google Chrome.", canListen() ? "" : "warn");
     renderSuggestions();
   } else if (msg.type === "match") {
     pending.get(msg.id)?.(msg.results);
@@ -110,18 +119,24 @@ const handlers = {
   onInterim: (text) => { interim = text; renderInterim(); scanInterim(); },
   onFinal: (text, alts = []) => { if (text) addSegment(text, alts); },
   onState: (state, detail) => setListenState(state, detail),
+  onLevel: (level) => els.listen.style.setProperty("--level", Math.min(1, level * 2.5).toFixed(2)),
 };
-const listener = new Listener(handlers);
+const listener = desktop ? new OfflineListener(handlers) : new Listener(handlers);
 const rehearsal = new Rehearsal(handlers);
 
 function setListenState(state, detail) {
-  const on = state === "listening" || state === "reconnecting" || state === "rehearsal";
+  const on = state === "listening" || state === "reconnecting" || state === "rehearsal" || state === "loading";
   els.listen.setAttribute("aria-pressed", String(on));
+  els.listen.dataset.state = state;
+  if (desktop && state === "listening") els.listen.dataset.level = "";
+  else delete els.listen.dataset.level;
   els.listen.querySelector(".listen-label").textContent = on ? "Stop listening" : "Start listening";
   els.sample.textContent = state === "rehearsal" ? "Stop sample" : "Play sample sermon";
   const lang = els.setLang.selectedOptions[0]?.textContent || settings.lang;
+  const modelName = settings.model === "light" ? "Light" : "Accurate";
   const text = {
-    listening: `Listening for ${lang}`,
+    loading: "Starting the speech model…",
+    listening: desktop ? `Listening on this laptop, ${modelName} model` : `Listening for ${lang}`,
     rehearsal: "Playing the sample sermon",
     reconnecting: detail || "Reconnecting…",
     blocked: detail,
@@ -142,9 +157,24 @@ els.listen.addEventListener("click", () => {
     rehearsal.stop();
   } else {
     rehearsal.stop();
-    listener.start(settings.lang);
+    startListening();
   }
 });
+
+async function startListening() {
+  if (desktop) {
+    const list = await desktop.listModels();
+    const chosen = list.find((m) => m.key === settings.model);
+    const usable = chosen?.installed ? chosen : list.find((m) => m.installed);
+    if (!usable) {
+      toast("Install a speech model first. It's a one-time download.");
+      openSettings();
+      return;
+    }
+    if (usable.key !== settings.model) { settings.model = usable.key; saveSettings(); }
+  }
+  listener.start(settings.lang, { model: settings.model, micId: settings.micId });
+}
 
 els.sample.addEventListener("click", () => {
   els.sample.blur();
@@ -161,8 +191,6 @@ function addSegment(text, alts = []) {
   segments.push(seg);
   log("heard", { text, alts });
   interim = "";
-  for (const s of unplaced) if (!s.placed) { s.placed = true; seg.found.push(s.id); }
-  unplaced = [];
   // Spoken references ("John 3:16", "verse 17")
   if (bible) {
     const { refs, context } = findReferences(text, bible, refContext);
@@ -185,6 +213,13 @@ function addSegment(text, alts = []) {
       }
     }
   }
+  // Verses matched while this sentence was still being spoken belong to it,
+  // unless it already underlines them as a spoken reference.
+  for (const s of unplaced) {
+    if (!s.placed && !seg.marks.some((m) => m.sid === s.id)) seg.found.push(s.id);
+    s.placed = true;
+  }
+  unplaced = [];
   renderTranscript();
   scheduleMatch(seg);
 }
@@ -199,15 +234,22 @@ function recentWords(n, extra = "") {
 }
 
 let interimTimer = null;
+let lastInterimRefs = new Set();
 function scanInterim() {
   if (!bible || !interim) return;
   // Catch "John 3:16" while it's still being spoken. Only full references, so a half-heard
   // chapter number doesn't jump the gun.
   const { refs } = findReferences(interim, bible, refContext);
-  // A reference still being spoken may grow ("Romans 8:20…" becomes "8:28"), so wait for a word after it.
+  // A reference still being spoken may grow ("Romans 8:20…" becomes "8:28"), so wait for a word
+  // after it, and for two updates in a row to agree; interim guesses can change their mind.
+  const seen = new Set();
   for (const r of refs) {
-    if (r.kind === "explicit" && interim.slice(r.end).trim()) suggestFromRef(r, interim.slice(r.start, r.end));
+    if (r.kind !== "explicit" || !interim.slice(r.end).trim()) continue;
+    const key = `${r.book}:${r.chapter}:${r.verse}:${r.endVerse}`;
+    seen.add(key);
+    if (lastInterimRefs.has(key)) suggestFromRef(r, interim.slice(r.start, r.end));
   }
+  lastInterimRefs = seen;
   clearTimeout(interimTimer);
   interimTimer = setTimeout(() => {
     runMatch(recentWords(14, interim), null);
@@ -626,7 +668,12 @@ els.next.addEventListener("click", () => step(1));
 els.clearScreen.addEventListener("click", clearScreen);
 els.copyLive.addEventListener("click", () => live && copyRef(formatRef({ ...bible.ref(live.index), kind: "explicit" })));
 
-els.openScreen.addEventListener("click", () => {
+els.openScreen.addEventListener("click", async () => {
+  if (desktop) {
+    const r = await desktop.openProjector(settings.screenId);
+    toast(r.onProjector ? `Projector screen is on ${r.name}` : "No projector found, so the screen opened in a window. Connect the projector, then press this again.");
+    return;
+  }
   const w = window.open("display.html", "flashdisplay-screen", "popup,width=1280,height=720");
   if (!w) toast("Your browser blocked the window. Allow pop-ups for this page and try again.");
   else toast("Drag the new window to the projector, then double-click it for full screen.");
@@ -755,10 +802,110 @@ function syncSettingsForm() {
   if (radio) radio.checked = true;
 }
 
-els.openSettings.addEventListener("click", () => {
+function openSettings() {
   syncSettingsForm();
-  els.settings.showModal();
+  if (!els.settings.open) els.settings.showModal();
+  if (desktop) { renderModels(); fillMicrophones(); fillScreens(); }
+}
+els.openSettings.addEventListener("click", openSettings);
+
+// ---- Desktop-only settings: speech models, microphone, projector screen ----
+
+let modelList = [];
+let modelProgress = null;
+
+async function renderModels() {
+  modelList = await desktop.listModels();
+  els.models.innerHTML = modelList.map((m) => {
+    const p = modelProgress?.key === m.key ? modelProgress : null;
+    const pct = p?.total ? Math.round((p.received / p.total) * 100) : null;
+    const state = p ? (p.step === "unpack" ? "Unpacking…" : `Downloading ${pct ?? 0}%`) : m.installed ? "Installed" : `${m.megabytes} MB download`;
+    return `
+      <label class="model" data-active="${settings.model === m.key}">
+        <input type="radio" name="model" value="${m.key}" ${settings.model === m.key ? "checked" : ""} ${m.installed ? "" : "disabled"}>
+        <span class="model-name">${escapeHtml(m.name)}</span>
+        <span class="model-state" data-ok="${m.installed && !p}">${state}</span>
+        <span class="model-note">${escapeHtml(m.note)}</span>
+        ${p ? `<span class="progress"><span style="width:${p.step === "unpack" ? 100 : pct ?? 0}%"></span></span>` : ""}
+        <span class="model-actions">
+          ${m.installed ? `<button class="text-btn" type="button" data-remove="${m.key}">Remove</button>`
+            : `<button class="btn" type="button" data-download="${m.key}" ${modelProgress ? "disabled" : ""}>Download ${m.name}</button>`}
+        </span>
+      </label>`;
+  }).join("");
+}
+
+desktop?.onModelProgress((p) => {
+  modelProgress = p.step === "done" ? null : p;
+  if (els.settings.open) renderModels();
 });
+
+els.models?.addEventListener("click", async (e) => {
+  const dl = e.target.closest("[data-download]");
+  const rm = e.target.closest("[data-remove]");
+  if (!dl && !rm) return;
+  e.preventDefault();
+  if (dl) {
+    const key = dl.dataset.download;
+    modelProgress = { key, step: "download", received: 0, total: 1 };
+    renderModels();
+    try {
+      await desktop.downloadModel(key);
+      settings.model = key;
+      saveSettings();
+      toast("Speech model installed. FlashDisplay can now listen without internet.");
+    } catch (err) {
+      toast(cleanError(err));
+    }
+    modelProgress = null;
+    renderModels();
+  } else {
+    if (listener.want && settings.model === rm.dataset.remove) listener.stop();
+    await desktop.removeModel(rm.dataset.remove);
+    renderModels();
+  }
+});
+
+els.models?.addEventListener("change", (e) => {
+  if (e.target.name !== "model") return;
+  settings.model = e.target.value;
+  saveSettings();
+  renderModels();
+  if (listener.want) startListening();
+});
+
+els.importModel?.addEventListener("click", async () => {
+  try {
+    const r = await desktop.importModel();
+    if (r.imported) {
+      settings.model = r.imported;
+      saveSettings();
+      toast("Speech model installed from the file.");
+    }
+  } catch (err) {
+    toast(cleanError(err));
+  }
+  modelProgress = null;
+  renderModels();
+});
+
+function cleanError(err) {
+  return String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
+}
+
+async function fillMicrophones() {
+  const mics = await listMicrophones();
+  els.setMic.innerHTML = `<option value="">Default microphone</option>` +
+    mics.map((m, i) => `<option value="${escapeHtml(m.deviceId)}">${escapeHtml(m.label || `Microphone ${i + 1}`)}</option>`).join("");
+  els.setMic.value = mics.some((m) => m.deviceId === settings.micId) ? settings.micId : "";
+}
+
+async function fillScreens() {
+  const screens = await desktop.listScreens();
+  els.setScreen.innerHTML = `<option value="">The projector (any screen that isn't this one)</option>` +
+    screens.map((d) => `<option value="${d.id}">${escapeHtml(d.name)}, ${d.width}×${d.height}${d.primary ? ", this screen" : ""}</option>`).join("");
+  els.setScreen.value = screens.some((d) => String(d.id) === String(settings.screenId)) ? String(settings.screenId) : "";
+}
 
 els.settings.addEventListener("input", (e) => {
   const t = e.target;
@@ -767,6 +914,11 @@ els.settings.addEventListener("input", (e) => {
     if (listener.want) listener.start(settings.lang);
   }
   if (t === els.setAuto) settings.auto = t.value;
+  if (t === els.setMic) {
+    settings.micId = t.value;
+    if (listener.want) startListening();
+  }
+  if (t === els.setScreen) settings.screenId = t.value ? Number(t.value) : null;
   if (t === els.setScale) settings.look.scale = Number(t.value);
   if (t === els.setVersion) settings.look.showVersion = t.checked;
   if (t.name === "theme") settings.look.theme = t.value;

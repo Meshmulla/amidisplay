@@ -107,7 +107,16 @@
 
     <fieldset>
       <legend>Listening</legend>
-      <label class="field">
+      <div class="field desktop-only">
+        <span>Speech model, runs on this laptop with no internet</span>
+        <div class="models" id="models" role="radiogroup" aria-label="Speech model"></div>
+        <button class="text-btn import-model" id="import-model" type="button">Install a model from a file (for laptops without internet)</button>
+      </div>
+      <label class="field desktop-only">
+        <span>Microphone</span>
+        <select id="set-mic"><option value="">Default microphone</option></select>
+      </label>
+      <label class="field web-only">
         <span>Preacher's accent</span>
         <select id="set-lang">
           <option value="en-NG">English (Nigeria)</option>
@@ -130,6 +139,10 @@
 
     <fieldset>
       <legend>Projector screen</legend>
+      <label class="field desktop-only">
+        <span>Show on</span>
+        <select id="set-screen"></select>
+      </label>
       <div class="field">
         <span>Look</span>
         <div class="themes" role="radiogroup" aria-label="Screen look" id="set-theme">
@@ -150,7 +163,9 @@
       </label>
     </fieldset>
 
-    <p class="settings-note">Speech recognition runs through Chrome and needs an internet connection. Bible text: King James Version. Modern wording is matched using the Berean Standard Bible and New Heart English Bible, both public domain.</p>
+    <p class="settings-note web-only">Speech recognition runs through Chrome and needs an internet connection. For listening without internet, use the FlashDisplay desktop app.</p>
+    <p class="settings-note desktop-only" id="desktop-note">Everything runs on this laptop. The internet is only needed once, to download a speech model.</p>
+    <p class="settings-note">Bible text: King James Version. Modern wording is matched using the Berean Standard Bible and New Heart English Bible, both public domain.</p>
   </form>
 </dialog>
 

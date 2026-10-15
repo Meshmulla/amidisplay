@@ -88,3 +88,16 @@ test("accented and sound-alike numbers", () => {
   assert.deepEqual(refs("the tree of life in Genesis"), []);
   assert.deepEqual(refs("verses to remember", { book: 42, chapter: 3 }), []);
 });
+
+test("what offline speech models write", () => {
+  // Real outputs from Parakeet, Moonshine and Whisper on a test sermon
+  assert.deepEqual(refs("Turn with me to Philippians chapter 4, verse 6."), ["Philippians 4:6"]);
+  assert.deepEqual(refs("Let me take you to Romans 8, 28."), ["Romans 8:28"]);
+  assert.deepEqual(refs("Open your Bibles to 1 Corinthians 13, verse 4."), ["1 Corinthians 13:4"]);
+  assert.deepEqual(refs("Ephesians 6.10, be strong in the Lord"), ["Ephesians 6:10"]);
+  assert.deepEqual(refs("2 Timothy 1.7, God has not given us"), ["2 Timothy 1:7"]);
+  assert.deepEqual(refs("Psalm 121, verse 1, I will lift up mine eyes"), ["Psalm 121:1"]);
+  assert.deepEqual(refs("Ephesians 6 10 Be strong in the Lord"), ["Ephesians 6:10"]);
+  assert.deepEqual(refs("Open your Bibles to 1st Corinthians 13, 1st 4."), ["1 Corinthians 13"]);
+  assert.deepEqual(refs("it costs 3.50 in John's shop"), []);
+});

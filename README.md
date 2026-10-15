@@ -10,7 +10,47 @@ It catches verses three ways:
 
 Nothing goes on screen until the media desk presses **Show** (or Enter), unless you turn on automatic showing in Settings.
 
-## Running it on the media laptop
+## Two versions, one app
+
+| | Web version | Desktop app (Windows) |
+| --- | --- | --- |
+| Listening | Chrome's speech service | A speech model on the laptop |
+| Internet during the service | Needed | **Not needed** |
+| Setup | Open a link in Chrome | Install once, download a model once |
+| Projector screen | Drag a window to the projector | Opens full screen on the projector by itself |
+
+Everything else (verse matching, the console, the projector looks) is the same code.
+
+## Desktop app: works without internet
+
+**Install**
+
+1. Download `FlashDisplay-Setup.exe` from this repo's **Releases** page (or from the latest run under **Actions → Windows installer**).
+2. Run it. Windows may warn that the app is from an unknown publisher; choose **More info → Run anyway**. (The installer isn't code-signed yet.)
+3. Open FlashDisplay, go to **Settings**, and press **Download Accurate**. It's a one-time download of about 480 MB. After that, the internet can be switched off.
+
+**No internet at the church at all?** On any computer with internet, download the model file directly:
+
+- Accurate: [sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2)
+- Light, for older laptops: [sherpa-onnx-moonshine-base-en-int8.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-base-en-int8.tar.bz2)
+
+Copy it to the media laptop on a USB stick, then in **Settings** choose **Install a model from a file**.
+
+**Which model?**
+
+- **Accurate** (NVIDIA Parakeet, 0.6B): best with accents and Bible names. Uses about 1 GB of memory. On a slow 2-core test machine it transcribed a sentence in about half a second.
+- **Light** (Moonshine): about half the memory and three times faster, slightly less accurate. For laptops with 4 GB of memory.
+
+**During the service**
+
+- **Open projector screen** puts the screen straight onto the projector, full screen. If more than one extra screen is connected, choose which one in Settings.
+- Choose the **Microphone** in Settings. A feed from the sound desk (through a USB audio interface) gives much better results than the laptop's built-in mic.
+- The ring around the Listen dot moves with the sound level, so you can see the preacher is being heard.
+- Words appear about a second after each sentence, slightly later than the web version, then verses show up the same way.
+
+**Building the installer yourself:** push a tag like `v0.2.0`, and the **Windows installer** workflow in `.github/workflows/desktop.yml` builds it and attaches it to a release. Locally on Windows: `npm ci` then `npm run dist:win`.
+
+## Web version: running it on the media laptop
 
 You need **Google Chrome** (or Microsoft Edge) and an internet connection. Chrome's speech recognition runs online.
 
@@ -81,8 +121,11 @@ Press **Play sample sermon**. It plays a short sermon through the same pipeline 
 
 ```
 npm test        # reference parsing and verse matching tests
-npm start       # local server on http://localhost:5173
+npm start       # web version on http://localhost:5173
+npm run desktop # desktop app (needs a model in Settings)
 ```
+
+The desktop app lives in `desktop/`: `main.cjs` (windows, local server, projector placement), `engine-worker.cjs` (voice detection and transcription on its own thread, using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)) and `models.cjs` (downloading and installing speech models).
 
 `tests/fixtures.js` holds real-world quotes and ordinary sermon talk. Add to it whenever the matcher gets something wrong in a real service; it's the fastest way to make it better.
 
@@ -95,7 +138,6 @@ python3 tools/build_bible_data.py bible_databases/formats/json
 
 ## What's next
 
-- **A stronger listening engine.** Either Whisper running on the laptop (offline, prompted with Bible vocabulary) or a paid cloud service with keyword boosting, chosen by testing your preacher's real recordings.
 - **Smarter paraphrase matching** using meaning-based search for loose retellings that share few words with any translation.
 - **Splitting very long verses** across two screens.
 - **Sermon notes**: export the transcript and every verse shown after the service.
@@ -104,3 +146,4 @@ python3 tools/build_bible_data.py bible_databases/formats/json
 
 - Bible text: King James Version (public domain). Matching also uses the Berean Standard Bible (public domain) and New Heart English Bible (public domain), via [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases).
 - Fonts: Newsreader and Instrument Sans, SIL Open Font License 1.1.
+- Offline speech: sherpa-onnx (Apache 2.0), Silero VAD (MIT), NVIDIA Parakeet TDT 0.6B v2 (CC-BY-4.0), Moonshine (MIT).

@@ -36,6 +36,7 @@ body {
 }
 
 h2, h3, p { margin: 0; }
+.transcript, .suggestions, .results, .settings { scrollbar-width: thin; scrollbar-color: var(--ink-3) transparent; }
 button, input, select { font: inherit; color: inherit; }
 svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
@@ -180,6 +181,9 @@ kbd {
 }
 .listen[aria-pressed="true"] { border-color: rgba(124, 198, 161, 0.55); background: rgba(124, 198, 161, 0.1); }
 .listen[aria-pressed="true"] .listen-dot { border-color: var(--listen); background: var(--listen); animation: breathe 2.4s ease-in-out infinite; }
+/* Offline mode reports the real microphone level, so the ring shows the preacher is being heard. */
+.listen[data-level] .listen-dot { animation: none; box-shadow: 0 0 0 calc(var(--level, 0) * 9px) rgba(124, 198, 161, 0.35); transition: box-shadow 90ms linear; }
+.listen[data-state="loading"] .listen-dot { border-color: var(--gold); background: none; animation: breathe 1.2s ease-in-out infinite; }
 
 @keyframes breathe {
   0%, 100% { box-shadow: 0 0 0 0 rgba(124, 198, 161, 0.45); }
@@ -409,7 +413,8 @@ kbd {
 /* Settings -------------------------------------------------------------- */
 
 .settings {
-  width: min(520px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
   padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-panel);
@@ -452,6 +457,38 @@ select, .field input[type="range"] {
 .sw-daylight { color: #1c1f33; }
 
 .settings-note { font-size: 12px; color: var(--text-3); line-height: 1.55; }
+.settings-note + .settings-note { margin-top: -12px; }
+
+/* Desktop app vs web version */
+.desktop-only { display: none !important; }
+html.is-desktop .desktop-only { display: grid !important; }
+html.is-desktop p.desktop-only { display: block !important; }
+html.is-desktop .web-only { display: none !important; }
+
+.models { display: grid; gap: 8px; }
+.model {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-ctl);
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  cursor: pointer;
+}
+.model[data-active="true"] { border-color: var(--gold); }
+.model input { margin: 3px 0 0; accent-color: var(--gold); }
+.model input:disabled { opacity: 0.4; }
+.model-name { font-weight: 600; }
+.model-note { grid-column: 2 / -1; font-size: 13px; color: var(--text-2); }
+.model-state { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.model-state[data-ok="true"] { color: var(--listen); }
+.model-actions { grid-column: 2 / -1; display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.model-actions .btn { height: 32px; }
+.progress { grid-column: 2 / -1; height: 4px; border-radius: 4px; background: var(--ink-0); overflow: hidden; margin-top: 8px; }
+.progress span { display: block; height: 100%; background: var(--gold); width: 0; transition: width 200ms linear; }
+.import-model { justify-self: start; margin-top: 2px; }
 
 /* Toast ----------------------------------------------------------------- */
 

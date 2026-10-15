@@ -1,0 +1,47 @@
+# Builds the FlashDisplay Windows installer.
+# Runs when a version tag like v0.2.0 is pushed (and attaches the installer to a GitHub Release),
+# or by hand from the Actions tab ("Run workflow"), where the installer is kept as a download.
+name: Windows installer
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Build installer
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlashDisplay-Windows-installer
+          path: dist/FlashDisplay-Setup-*.exe
+          retention-days: 30
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/FlashDisplay-Setup-*.exe \
+            --title "FlashDisplay $GITHUB_REF_NAME" \
+            --notes "Windows installer. After installing, open Settings and download a speech model once; after that FlashDisplay listens without internet." \
+          || gh release upload "$GITHUB_REF_NAME" dist/FlashDisplay-Setup-*.exe --clobber

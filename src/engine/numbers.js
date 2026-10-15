@@ -17,6 +17,8 @@ export function tokenize(text) {
   let m;
   while ((m = re.exec(text))) {
     let t = m[0].toLowerCase();
+    // "6.10" from offline speech engines means chapter 6 verse 10
+    if (t === "." && /\d$/.test(text.slice(0, m.index)) && /^\d/.test(text.slice(m.index + 1))) t = ":";
     if (t === "–" || t === "—") t = "-";
     tokens.push({ t, start: m.index, end: m.index + m[0].length });
   }
