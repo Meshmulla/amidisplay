@@ -1,0 +1,148 @@
+/* Projector screen. Readability from the back row comes first. */
+
+:root {
+  --scale: 1;
+  --bg: #12152a;
+  --text: #f5efe2;
+  --ref: #e9b949;
+  --muted: rgba(245, 239, 226, 0.55);
+  --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body.no-cursor { cursor: none; }
+
+/* Themes ---------------------------------------------------------------- */
+
+body[data-theme="vespers"] {
+  --bg: #12152a;
+  background:
+    radial-gradient(120% 90% at 50% 115%, #2b3166 0%, rgba(43, 49, 102, 0) 60%),
+    radial-gradient(70% 60% at 50% -20%, #1d2244 0%, rgba(29, 34, 68, 0) 70%),
+    #12152a;
+}
+
+body[data-theme="black"] { --bg: #000; --text: #fff; --ref: #f2cd6b; background: #000; }
+
+body[data-theme="daylight"] {
+  --bg: #f7f4ee; --text: #1c1f33; --ref: #8a5a00; --muted: rgba(28, 31, 51, 0.5);
+  background: #f7f4ee;
+}
+
+body[data-theme="lower-third"] { --bg: transparent; background: transparent; }
+body[data-theme="green"] { --bg: #00b140; background: #00b140; }
+
+/* Stage and slides ------------------------------------------------------- */
+
+.stage { position: fixed; inset: 0; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 9vh 9vw;
+  opacity: 0;
+  transform: translateY(0.6vh);
+  transition: opacity 420ms ease, transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.slide.in { opacity: 1; transform: none; }
+.slide.leaving { opacity: 0; transform: translateY(-0.4vh); transition-duration: 300ms; }
+.slide.instant { transition: none; }
+
+.frame {
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.verse {
+  font-weight: 400;
+  font-size: 64px;
+  line-height: 1.32;
+  letter-spacing: 0.002em;
+  font-variation-settings: "opsz" 72;
+  text-wrap: balance;
+  hanging-punctuation: first;
+}
+.verse em { font-style: italic; opacity: 0.88; }
+.verse .superscription { display: block; font-size: 0.55em; font-style: italic; color: var(--muted); margin-bottom: 0.4em; }
+
+.ref {
+  margin-top: 1.3em;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: calc(clamp(18px, 4vh, 52px) * var(--scale));
+  letter-spacing: 0.04em;
+  color: var(--ref);
+  display: inline-flex;
+  gap: 0.7em;
+  justify-content: center;
+  align-items: baseline;
+}
+.ref .version { font-weight: 500; font-size: 0.62em; letter-spacing: 0.12em; color: var(--muted); }
+
+/* Lower third (for livestream overlays and chroma key) ------------------- */
+
+body[data-theme="lower-third"] .slide,
+body[data-theme="green"] .slide {
+  place-items: end center;
+  padding: 0 4vw 5vh;
+}
+body[data-theme="lower-third"] .frame,
+body[data-theme="green"] .frame {
+  width: 100%;
+  max-height: 30vh;
+  text-align: left;
+  padding: 2.4vh 3vw 2.6vh;
+  background: rgba(10, 12, 28, 0.86);
+  border-left: 0.5vh solid #e9b949;
+  border-radius: 0.6vh;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+}
+body[data-theme="lower-third"] .verse,
+body[data-theme="green"] .verse { line-height: 1.25; color: #f5efe2; text-wrap: pretty; }
+body[data-theme="lower-third"] .ref,
+body[data-theme="green"] .ref {
+  margin: 0 0 0.5em;
+  justify-content: flex-start;
+  font-size: calc(clamp(14px, 2.4vh, 30px) * var(--scale));
+  color: #e9b949;
+}
+body[data-theme="lower-third"] .ref .version,
+body[data-theme="green"] .ref .version { color: rgba(245, 239, 226, 0.55); }
+
+/* Hint ------------------------------------------------------------------ */
+
+.hint {
+  position: fixed;
+  bottom: 3vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--muted);
+  transition: opacity 600ms ease;
+}
+.hint.gone { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide, .slide.leaving { transition: opacity 150ms linear; transform: none; }
+}

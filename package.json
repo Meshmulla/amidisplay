@@ -1,0 +1,11 @@
+{
+  "name": "flashdisplay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Live sermon transcription that finds the Bible verse being preached and puts it on screen in KJV.",
+  "scripts": {
+    "start": "node tools/serve.js",
+    "test": "node --test tests/*.test.js"
+  }
+}
