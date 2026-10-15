@@ -1,5 +1,18 @@
 // Live speech-to-text using the browser's built-in recogniser (Chrome / Edge).
 // Chrome stops listening after silence or about a minute, so this restarts it quietly.
+//
+// Two things help it hear sermons better:
+//  - It asks for Chrome's backup guesses (alternatives) for every sentence, so a reference
+//    misheard in the top guess can still be found in the second or third.
+//  - Where Chrome supports it, it boosts Bible book names so they're recognised more readily.
+
+import { BOOK_NAMES } from "../engine/books.js";
+
+const BOOST_PHRASES = [
+  ...new Set(BOOK_NAMES.map((n) => n.replace(/^\d /, ""))),
+  "chapter", "verse", "verses", "first Corinthians", "second Corinthians", "first John", "Song of Solomon",
+  "Psalm", "the Bible says", "turn with me to",
+];
 
 export function speechSupported() {
   return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -7,7 +20,7 @@ export function speechSupported() {
 
 export class Listener {
   /**
-   * @param {{onInterim:(t:string)=>void, onFinal:(t:string)=>void, onState:(s:string, detail?:string)=>void}} handlers
+   * @param {{onInterim:(t:string)=>void, onFinal:(t:string, alternatives:string[])=>void, onState:(s:string, detail?:string)=>void}} handlers
    */
   constructor(handlers) {
     this.h = handlers;
@@ -15,6 +28,12 @@ export class Listener {
     this.lang = "en-NG";
     this.rec = null;
     this.restarts = 0;
+    this.boost = "SpeechRecognitionPhrase" in window; // switched off if Chrome refuses it
+  }
+
+  /** Whether book names are being boosted in this browser. */
+  get boosting() {
+    return this.boost;
   }
 
   start(lang) {
@@ -38,20 +57,37 @@ export class Listener {
     rec.lang = this.lang;
     rec.continuous = true;
     rec.interimResults = true;
-    rec.maxAlternatives = 1;
+    rec.maxAlternatives = 4;
+    if (this.boost) {
+      try {
+        rec.phrases = BOOST_PHRASES.map((p) => new window.SpeechRecognitionPhrase(p, 4));
+      } catch {
+        this.boost = false;
+      }
+    }
     rec.onstart = () => this.h.onState("listening");
     rec.onresult = (e) => {
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) this.h.onFinal(r[0].transcript.trim());
-        else interim += r[0].transcript;
+        if (r.isFinal) {
+          const alts = [];
+          for (let a = 1; a < r.length; a++) {
+            const t = r[a].transcript.trim();
+            if (t && t !== r[0].transcript.trim()) alts.push(t);
+          }
+          this.h.onFinal(r[0].transcript.trim(), alts);
+        } else interim += r[0].transcript;
       }
       this.h.onInterim(interim.trim());
       this.restarts = 0;
     };
     rec.onerror = (e) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
+      if (e.error === "phrases-not-supported") {
+        this.boost = false; // restarts without boosting on the next spawn
+        return;
+      }
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
         this.want = false;
         this.h.onState("blocked", "Microphone access was refused. Allow the microphone for this page in Chrome's address bar, then press Listen again.");

@@ -5,8 +5,10 @@ const SMALL = {
   zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
   ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
   seventeen: 17, eighteen: 18, nineteen: 19,
+  // as often heard from West African English speakers by speech engines
+  tirteen: 13, fourtheen: 14, tree: 3,
 };
-const TENS = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+const TENS = { twenty: 20, thirty: 30, tirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
 
 /** Split text into tokens with character offsets. Keeps ":" and "-" as their own tokens. */
 export function tokenize(text) {
@@ -50,6 +52,7 @@ export function mergeNumbers(tokens) {
       else out.push(tok);
       continue;
     }
+    if (tok.t === "tree" && !(cur && cur.last === "tens")) { flush(); out.push(tok); continue; }
     const v = tok.t in SMALL ? SMALL[tok.t] : tok.t in TENS ? TENS[tok.t] : 100;
     if (cur && k === "unit" && v > 0 && cur.last === "tens") { cur.n += v; cur.last = "unit"; }
     else if (cur && k !== "hundred" && cur.last === "hundred" && cur.n % 100 === 0) { cur.n += v; cur.last = k; }

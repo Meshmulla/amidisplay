@@ -5,10 +5,11 @@
 
 import { ALIASES, ALIAS_LIST, AMBIGUOUS, BOOK_NAMES } from "./books.js";
 import { tokenize, mergeNumbers } from "./numbers.js";
+import { repairBooks, NUMBER_SOUNDS } from "./hearing.js";
 
 const MAX_ALIAS_WORDS = Math.max(...ALIAS_LIST.map((a) => a.split(" ").length));
-const CHAPTER_WORDS = new Set(["chapter", "chapters", "chap", "ch"]);
-const VERSE_WORDS = new Set(["verse", "verses", "vs", "v", "vss", "vv"]);
+const CHAPTER_WORDS = new Set(["chapter", "chapters", "chap", "ch", "chapta"]);
+const VERSE_WORDS = new Set(["verse", "verses", "vs", "v", "vss", "vv", "versus", "vase", "vers", "vess"]);
 const RANGE_WORDS = new Set(["-", "to", "through", "thru", "till", "until", "unto"]);
 const FILLER = new Set(["from", "at", "and", "in", "the", "of"]);
 
@@ -23,7 +24,7 @@ const FILLER = new Set(["from", "at", "and", "in", "the", "of"]);
  *   start/end: character offsets of the spoken reference in `text`
  */
 export function findReferences(text, bible, context = null) {
-  const toks = mergeNumbers(tokenize(text));
+  const toks = repairBooks(mergeNumbers(tokenize(text)).map((t) => (t.t.endsWith("'s") ? { ...t, t: t.t.slice(0, -2) } : t)));
   const refs = [];
   let ctx = context;
   let i = 0;
@@ -69,6 +70,13 @@ function num(tok) {
   return tok && typeof tok.n === "number" ? tok.n : null;
 }
 
+/** A number where one is clearly expected, allowing for sound-alikes ("verse for" -> 4). */
+function slotNum(tok) {
+  const n = num(tok);
+  if (n !== null) return n;
+  return tok && tok.t in NUMBER_SOUNDS ? NUMBER_SOUNDS[tok.t] : null;
+}
+
 function chapterCount(bible, b) {
   return bible.books[b].chapters.length;
 }
@@ -82,8 +90,8 @@ function parseAfterBook(toks, j, book, bible) {
   // "John, chapter 3", "John chapter three"
   while (toks[k] && (toks[k].t === "," || FILLER.has(toks[k].t))) k++;
   if (toks[k] && CHAPTER_WORDS.has(toks[k].t)) { sawChapterWord = true; k++; }
-  const hadNumberRightAway = num(toks[j]) !== null || sawChapterWord;
-  let chapter = num(toks[k]);
+  const hadNumberRightAway = num(toks[j]) !== null || toks[j]?.t === "tree" || sawChapterWord;
+  let chapter = sawChapterWord ? slotNum(toks[k]) : toks[k]?.t === "tree" ? 3 : num(toks[k]);
   if (chapter === null) return null;
   let chapEnd = toks[k].end;
   k++;
@@ -113,7 +121,7 @@ function parseAfterBook(toks, j, book, bible) {
     if (toks[v] && VERSE_WORDS.has(toks[v].t)) { sawVerseWord = true; v++; }
     else v = k; // bare number directly after chapter: "John 3 16"
   }
-  const verse = num(toks[v]);
+  const verse = sawVerseWord || toks[v - 1]?.t === ":" ? slotNum(toks[v]) : toks[v]?.t === "tree" ? 3 : num(toks[v]);
   if (verse !== null && verse >= 1 && verse <= verseCount(bible, book, chapter) && (sawVerseWord || v === k || toks[v - 1].t === ":")) {
     const ref = { book, chapter, verse, endVerse: verse, kind: "explicit", end: toks[v].end };
     const r = parseRange(toks, v + 1, ref, bible);

@@ -15,6 +15,7 @@ const els = {
   suggestions: $("suggestions"), loading: $("loading"), loadingText: $("loading-text"),
   tally: $("tally"), tallyText: $("tally-text"), monitor: $("monitor"), monitorFrame: $("monitor-frame"),
   prev: $("prev-verse"), next: $("next-verse"), clearScreen: $("clear-screen"), copyLive: $("copy-live"),
+  copyTranscript: $("copy-transcript"), saveSession: $("save-session"),
   search: $("search"), results: $("results"), toast: $("toast"), tpl: $("tpl-suggestion"),
   setLang: $("set-lang"), setAuto: $("set-auto"), setTheme: $("set-theme"), setScale: $("set-scale"), setVersion: $("set-version"),
 };
@@ -48,6 +49,12 @@ const suggestions = [];    // newest first
 let selectedId = null;
 let live = null;           // { index, sid }
 let nextId = 1;
+
+// Everything that happened this service, for "Save session". Shared back to tune the matcher.
+const session = { started: Date.now(), events: [] };
+function log(type, data = {}) {
+  session.events.push({ t: Date.now(), type, ...data });
+}
 
 const channel = openChannel((msg) => {
   if (msg.type === "hello") pushScreen();
@@ -101,7 +108,7 @@ function match(text, limit = 3) {
 
 const handlers = {
   onInterim: (text) => { interim = text; renderInterim(); scanInterim(); },
-  onFinal: (text) => { if (text) addSegment(text); },
+  onFinal: (text, alts = []) => { if (text) addSegment(text, alts); },
   onState: (state, detail) => setListenState(state, detail),
 };
 const listener = new Listener(handlers);
@@ -149,9 +156,10 @@ els.sample.addEventListener("click", () => {
 // ---------------------------------------------------------------------------
 // Transcript
 
-function addSegment(text) {
-  const seg = { id: nextId++, text, marks: [], found: [] };
+function addSegment(text, alts = []) {
+  const seg = { id: nextId++, text, alts, time: Date.now(), marks: [], found: [] };
   segments.push(seg);
+  log("heard", { text, alts });
   interim = "";
   for (const s of unplaced) if (!s.placed) { s.placed = true; seg.found.push(s.id); }
   unplaced = [];
@@ -162,6 +170,19 @@ function addSegment(text) {
     for (const r of refs) {
       const s = suggestFromRef(r, text.slice(r.start, r.end));
       if (s) { s.placed = true; seg.marks.push({ start: r.start, end: r.end, sid: s.id }); }
+    }
+    // Chrome's top guess had no reference: its backup guesses sometimes heard one.
+    if (!refs.some((r) => r.kind === "explicit")) {
+      for (const alt of alts) {
+        const found = findReferences(alt, bible, context).refs.filter((r) => r.kind === "explicit");
+        if (!found.length) continue;
+        for (const r of found) {
+          const s = suggestFromRef(r, alt.slice(r.start, r.end));
+          if (s && !seg.found.includes(s.id)) { s.placed = true; seg.found.push(s.id); }
+        }
+        refContext = { book: found.at(-1).book, chapter: found.at(-1).chapter };
+        break;
+      }
     }
   }
   renderTranscript();
@@ -198,6 +219,7 @@ function scanInterim() {
 // quick quote right after another verse, the long one catches a verse spread over sentences.
 function scheduleMatch(seg) {
   if (seg.text.split(/\s+/).length >= 4) runMatch(seg.text, seg);
+  if (seg.alts[0] && seg.alts[0].split(/\s+/).length >= 4) runMatch(seg.alts[0], seg);
   runMatch(recentWords(14), seg);
   runMatch(recentWords(36), seg);
 }
@@ -277,6 +299,67 @@ els.transcript.addEventListener("click", (e) => {
   select(Number(b.dataset.sid), true);
 });
 
+// ---------------------------------------------------------------------------
+// Copy and save
+
+function clock(t) {
+  const s = Math.max(0, Math.round((t - session.started) / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${h ? `${h}:` : ""}${String(m).padStart(h ? 2 : 1, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+function transcriptText() {
+  return segments.map((seg) => {
+    const verses = [...seg.marks.map((m) => m.sid), ...seg.found]
+      .map((id) => suggestions.find((s) => s.id === id)?.label).filter(Boolean);
+    return `[${clock(seg.time)}] ${seg.text}${verses.length ? `  (${[...new Set(verses)].join(", ")})` : ""}`;
+  }).join("\n");
+}
+
+function sessionText() {
+  const date = new Date(session.started);
+  const lines = [
+    `FlashDisplay session, ${date.toLocaleString()}`,
+    `Accent setting: ${settings.lang}. Book-name boosting: ${listener.boosting ? "on" : "not supported in this browser"}.`,
+    "",
+    "VERSES",
+    "Shown from search means FlashDisplay missed it. Those are the most useful lines for tuning.",
+    "",
+  ];
+  for (const e of session.events) {
+    if (e.type === "found") lines.push(`[${clock(e.t)}] Found ${e.label} (${e.kind === "match" ? `${Math.round(e.confidence * 100)}% match via ${e.version}` : e.kind}). Heard: "${e.heard}"`);
+    if (e.type === "shown") lines.push(`[${clock(e.t)}] Shown ${e.label}${e.via === "search" ? ` from search "${e.query}"` : ""}`);
+    if (e.type === "dismissed") lines.push(`[${clock(e.t)}] Dismissed ${e.label}`);
+  }
+  lines.push("", "TRANSCRIPT", "Lines starting with 'or:' are Chrome's backup guesses for the line above.", "");
+  for (const seg of segments) {
+    lines.push(`[${clock(seg.time)}] ${seg.text}`);
+    for (const a of seg.alts || []) lines.push(`        or: ${a}`);
+  }
+  return lines.join("\n");
+}
+
+els.copyTranscript.addEventListener("click", async () => {
+  if (!segments.length) { toast("Nothing to copy yet"); return; }
+  try {
+    await navigator.clipboard.writeText(transcriptText());
+    toast("Transcript copied");
+  } catch {
+    toast("Couldn't copy. Use Save session instead.");
+  }
+});
+
+els.saveSession.addEventListener("click", () => {
+  if (!segments.length && !session.events.length) { toast("Nothing to save yet"); return; }
+  const d = new Date(session.started);
+  const name = `FlashDisplay ${d.toISOString().slice(0, 10)} ${String(d.getHours()).padStart(2, "0")}-${String(d.getMinutes()).padStart(2, "0")}.txt`;
+  const url = URL.createObjectURL(new Blob([sessionText()], { type: "text/plain" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast("Session saved to your downloads");
+});
+
 els.clearTranscript.addEventListener("click", () => {
   segments.length = 0;
   interim = "";
@@ -334,6 +417,7 @@ function addSuggestion(input) {
   };
   s.label = labelFor(s);
   suggestions.unshift(s);
+  log("found", { label: s.label, kind: s.kind, confidence: s.confidence, version: s.version, heard: s.heard });
   if (suggestions.length > 60) suggestions.pop();
   if (!isPinned()) selectedId = s.id;
   renderSuggestions();
@@ -466,6 +550,7 @@ els.suggestions.addEventListener("click", (e) => {
   if (e.target.closest(".sugg-copy")) { copyRef(s.label); return; }
   if (e.target.closest(".sugg-dismiss")) {
     s.status = "dismissed";
+    log("dismissed", { label: s.label });
     moveSelection(1);
     renderSuggestions();
     return;
@@ -492,6 +577,7 @@ function maybeAutoShow(s) {
 // The projector
 
 function show(s) {
+  log("shown", { label: s.label, via: s.kind });
   s.status = "shown";
   live = { index: s.index, end: s.end, start: s.index, sid: s.id };
   selectedId = s.id;
@@ -499,7 +585,8 @@ function show(s) {
   renderSuggestions();
 }
 
-function showIndex(index) {
+function showIndex(index, query = "") {
+  log("shown", { label: formatRef({ ...bible.ref(index), kind: "explicit" }), via: "search", query });
   live = { index, start: index, end: index, sid: null };
   pushScreen();
   renderSuggestions();
@@ -615,7 +702,7 @@ function renderResults(q = "") {
 
 els.results.addEventListener("click", (e) => {
   const li = e.target.closest("[data-i]");
-  if (li) showIndex(Number(li.dataset.i));
+  if (li) showIndex(Number(li.dataset.i), els.search.value.trim());
 });
 
 els.search.addEventListener("keydown", (e) => {
@@ -627,7 +714,7 @@ els.search.addEventListener("keydown", (e) => {
     e.preventDefault();
     clearTimeout(searchTimer);
     runSearch().then(() => {
-      if (searchResults.length) showIndex(searchResults[searchSel]);
+      if (searchResults.length) showIndex(searchResults[searchSel], els.search.value.trim());
     });
   } else if (e.key === "Escape") {
     els.search.value = "";

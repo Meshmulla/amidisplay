@@ -38,7 +38,11 @@
     <section class="panel transcript-panel" aria-labelledby="transcript-h">
       <div class="panel-head">
         <h2 id="transcript-h">What's being said</h2>
-        <button class="text-btn" id="clear-transcript" type="button">Clear</button>
+        <div class="head-actions">
+          <button class="text-btn" id="copy-transcript" type="button" title="Copy the transcript to paste elsewhere">Copy</button>
+          <button class="text-btn" id="save-session" type="button" title="Download the transcript and every verse found, shown or searched for">Save session</button>
+          <button class="text-btn" id="clear-transcript" type="button">Clear</button>
+        </div>
       </div>
       <div class="transcript" id="transcript" tabindex="0" aria-live="off">
         <p class="empty" id="transcript-empty">The sermon will appear here as it's spoken. References like "John three sixteen" are underlined; tap one to jump to its verse.</p>

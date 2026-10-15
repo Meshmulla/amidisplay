@@ -103,6 +103,7 @@ kbd {
   padding: 14px 18px 12px;
 }
 .panel-head h2 { font: 600 14px/1.2 var(--sans); color: var(--text-2); }
+.head-actions { display: flex; gap: 12px; }
 .keys { display: flex; align-items: center; gap: 5px; color: var(--text-3); font-size: 12px; }
 
 /* Controls -------------------------------------------------------------- */

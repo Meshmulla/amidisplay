@@ -56,6 +56,17 @@ Two ways, depending on how your setup works:
 
 Settings has five looks: Evening (default), Black, Daylight (for bright halls), Lower third, and Green screen. You can also change the text size and hide the "KJV" label.
 
+## Helping it hear your preacher
+
+Chrome's speech recognition can't be trained, so FlashDisplay works around its mistakes:
+
+- **Backup guesses.** For every sentence Chrome gives up to four guesses. If the top guess missed a reference but a backup heard "Philippians 4:6", FlashDisplay still finds it.
+- **Misheard book names.** "Philippines 4:13", "a fusions 6:10", "Isaiah's 53", "have a cook 2:3", "Filipians 4 6" and similar are repaired, but only when a chapter and verse follow. "I visited the Philippines" is left alone.
+- **Accented numbers.** "John chapter tree verse sixteen", "Psalm twenty tree", "Hebrews 11 verse for" and "Romans 8 versus 28" all work.
+- **Book-name boosting.** In Chrome versions that support it, recognition is nudged toward Bible book names.
+
+The fastest way to improve it further is real sermons. After a service, press **Save session** above the transcript. It downloads a text file with everything Chrome heard (including its backup guesses), every verse found, and every verse the media desk had to look up by hand. Verses looked up by hand are the misses; share the file and they become fixes and test cases.
+
 ## Rehearse without a preacher
 
 Press **Play sample sermon**. It plays a short sermon through the same pipeline as the microphone, including spoken references, modern-translation quotes and paraphrase.
@@ -84,7 +95,7 @@ python3 tools/build_bible_data.py bible_databases/formats/json
 
 ## What's next
 
-- **Offline listening** with Whisper running on the laptop, so a bad connection doesn't matter.
+- **A stronger listening engine.** Either Whisper running on the laptop (offline, prompted with Bible vocabulary) or a paid cloud service with keyword boosting, chosen by testing your preacher's real recordings.
 - **Smarter paraphrase matching** using meaning-based search for loose retellings that share few words with any translation.
 - **Splitting very long verses** across two screens.
 - **Sermon notes**: export the transcript and every verse shown after the service.

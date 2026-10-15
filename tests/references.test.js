@@ -58,3 +58,33 @@ test("typed search", () => {
   assert.equal(formatRef(parseTypedReference("ps 23", bible)), "Psalm 23");
   assert.equal(formatRef(parseTypedReference("Phil. 4:13", bible)), "Philippians 4:13");
 });
+
+test("misheard book names are repaired when a reference follows", () => {
+  assert.deepEqual(refs("Philippines 4:13"), ["Philippians 4:13"]);
+  assert.deepEqual(refs("turn to a fusions chapter 6 verse 10"), ["Ephesians 6:10"]);
+  assert.deepEqual(refs("Isaiah's 53:5"), ["Isaiah 53:5"]);
+  assert.deepEqual(refs("is equal 37 verse 4"), ["Ezekiel 37:4"]);
+  assert.deepEqual(refs("have a cook 2:3"), ["Habakkuk 2:3"]);
+  assert.deepEqual(refs("Filipians 4 6"), ["Philippians 4:6"]); // sound-alike
+  assert.deepEqual(refs("Colosians 3:23"), ["Colossians 3:23"]); // sound-alike
+  assert.deepEqual(refs("Romance 8:28"), ["Romans 8:28"]);
+  assert.deepEqual(refs("Revolution 12 verse 11"), ["Revelation 12:11"]);
+});
+
+test("misheard words stay alone in ordinary speech", () => {
+  assert.deepEqual(refs("I travelled to the Philippines last year"), []);
+  assert.deepEqual(refs("this is not a romance 2 story"), []); // risky word needs chapter and verse
+  assert.deepEqual(refs("the revolution 2 years ago"), []);
+  assert.deepEqual(refs("it is equal to the task"), []);
+});
+
+test("accented and sound-alike numbers", () => {
+  assert.deepEqual(refs("John chapter tree verse sixteen"), ["John 3:16"]);
+  assert.deepEqual(refs("John tree sixteen"), ["John 3:16"]);
+  assert.deepEqual(refs("Psalm twenty tree"), ["Psalm 23"]);
+  assert.deepEqual(refs("Hebrews 11 verse for"), ["Hebrews 11:4"]);
+  assert.deepEqual(refs("Psalm one hundred and tirty tree verse one"), ["Psalm 133:1"]);
+  assert.deepEqual(refs("Romans 8 versus 28"), ["Romans 8:28"]);
+  assert.deepEqual(refs("the tree of life in Genesis"), []);
+  assert.deepEqual(refs("verses to remember", { book: 42, chapter: 3 }), []);
+});
