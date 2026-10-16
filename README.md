@@ -58,7 +58,7 @@ You need **Google Chrome** (or Microsoft Edge) and an internet connection. Chrom
 
 1. In this repo on GitHub, go to **Settings → Pages**.
 2. Under "Build and deployment", choose **Deploy from a branch**, branch **main**, folder **/ (root)**, then **Save**.
-3. After a minute, open `https://meshmulla.github.io/flashdisplay/` in Chrome.
+3. After a minute, open `https://meshmulla.github.io/amidisplay/` in Chrome.
 
 **Option 2: run it from the laptop**
 
