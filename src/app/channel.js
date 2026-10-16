@@ -2,8 +2,8 @@
 // Uses BroadcastChannel (same browser, same computer) and remembers the last state
 // so a display window opened later picks up what is on screen right now.
 
-const NAME = "flashdisplay";
-const KEY = "flashdisplay:screen";
+const NAME = "amidisplay";
+const KEY = "amidisplay:screen";
 
 export const DEFAULT_LOOK = {
   theme: "vespers", // vespers | black | daylight | lower-third | green

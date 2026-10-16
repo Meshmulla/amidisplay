@@ -1,4 +1,4 @@
-// Tiny static server for running FlashDisplay on the media laptop.
+// Tiny static server for running AMIDisplay on the media laptop.
 // Chrome only allows the microphone on https:// or http://localhost, so open the localhost link.
 import http from "node:http";
 import fs from "node:fs";
@@ -27,5 +27,5 @@ http.createServer((req, res) => {
     res.end(gzip ? zlib.gzipSync(body) : body);
   });
 }).listen(port, () => {
-  console.log(`FlashDisplay is running. Open http://localhost:${port} in Google Chrome.`);
+  console.log(`AMIDisplay is running. Open http://localhost:${port} in Google Chrome.`);
 });

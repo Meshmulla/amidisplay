@@ -1,4 +1,4 @@
-# Builds the FlashDisplay Windows installer.
+# Builds the AMIDisplay Windows installer.
 # - On every push to main that touches the app: the installer is kept as a download on the run.
 # - When a release is published on GitHub (Releases > Draft a new release, tag like v0.2.0):
 #   the installer is attached to that release.
@@ -36,8 +36,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: FlashDisplay-Windows-installer
-          path: dist/FlashDisplay-Setup-*.exe
+          name: AMIDisplay-Windows-installer
+          path: dist/AMIDisplay-Setup-*.exe
           retention-days: 30
 
       - name: Attach to release
@@ -45,4 +45,4 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" dist/FlashDisplay-Setup-*.exe --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/AMIDisplay-Setup-*.exe --clobber

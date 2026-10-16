@@ -2,7 +2,7 @@
 // to the speech engine running on this laptop (see desktop/engine-worker.cjs).
 // Same shape as Listener in speech.js, so the console can use either.
 
-export const desktop = window.flashdisplayDesktop || null;
+export const desktop = window.amidisplayDesktop || null;
 
 export class OfflineListener {
   constructor(handlers) {
@@ -41,7 +41,7 @@ export class OfflineListener {
       this.ctx = new AudioContext({ sampleRate: 16000 });
       await this.ctx.audioWorklet.addModule(new URL("./capture-worklet.js", import.meta.url));
       const src = this.ctx.createMediaStreamSource(this.stream);
-      const node = new AudioWorkletNode(this.ctx, "flashdisplay-capture");
+      const node = new AudioWorkletNode(this.ctx, "amidisplay-capture");
       node.port.onmessage = (e) => {
         desktop.sendAudio(e.data.samples);
         this.h.onLevel?.(e.data.level);

@@ -1,5 +1,5 @@
 {
-  "name": "flashdisplay",
+  "name": "amidisplay",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -20,10 +20,10 @@
     "unbzip2-stream": "^1.4.3"
   },
   "main": "desktop/main.cjs",
-  "author": "FlashDisplay",
+  "author": "AMIDisplay",
   "build": {
-    "appId": "app.flashdisplay.desktop",
-    "productName": "FlashDisplay",
+    "appId": "app.amidisplay.desktop",
+    "productName": "AMIDisplay",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -59,8 +59,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "FlashDisplay",
-      "artifactName": "FlashDisplay-Setup-${version}.exe"
+      "shortcutName": "AMIDisplay",
+      "artifactName": "AMIDisplay-Setup-${version}.exe"
     }
   }
 }

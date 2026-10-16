@@ -1,7 +1,7 @@
-// The bridge between the FlashDisplay page and the desktop app.
+// The bridge between the AMIDisplay page and the desktop app.
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("flashdisplayDesktop", {
+contextBridge.exposeInMainWorld("amidisplayDesktop", {
   info: () => ipcRenderer.invoke("app:info"),
 
   // Speech models

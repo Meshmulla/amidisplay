@@ -1,4 +1,4 @@
-// FlashDisplay desktop app (Windows). Serves the same pages as the web version from this
+// AMIDisplay desktop app (Windows). Serves the same pages as the web version from this
 // computer, and listens with a speech model that runs on this computer, so nothing needs
 // the internet once a model is installed.
 
@@ -57,7 +57,7 @@ function createConsole() {
     minWidth: 980,
     minHeight: 620,
     backgroundColor: "#13162a",
-    title: "FlashDisplay",
+    title: "AMIDisplay",
     icon: path.join(ROOT, "assets", "icon.png"),
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
@@ -99,7 +99,7 @@ function openProjector(displayId) {
     width: onProjector ? b.width : 1280,
     height: onProjector ? b.height : 720,
     backgroundColor: "#12152a",
-    title: "FlashDisplay screen",
+    title: "AMIDisplay screen",
     frame: !onProjector,
     autoHideMenuBar: true,
     fullscreen: onProjector,
@@ -162,7 +162,7 @@ function wire() {
   });
   ipcMain.handle("models:import", async () => {
     const pick = await dialog.showOpenDialog(consoleWin, {
-      title: "Choose a FlashDisplay speech model",
+      title: "Choose a AMIDisplay speech model",
       buttonLabel: "Install model",
       properties: ["openFile"],
       filters: [{ name: "Speech model", extensions: ["bz2"] }],
@@ -190,7 +190,13 @@ function wire() {
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
-  models = new Models(path.join(app.getPath("userData"), "models"));
+  const modelsDir = path.join(app.getPath("userData"), "models");
+  // The app used to be called FlashDisplay. Reuse a speech model it already downloaded.
+  const oldModels = path.join(app.getPath("appData"), "FlashDisplay", "models");
+  if (!fs.existsSync(modelsDir) && fs.existsSync(oldModels)) {
+    try { fs.mkdirSync(path.dirname(modelsDir), { recursive: true }); fs.renameSync(oldModels, modelsDir); } catch { /* fall back to a fresh download */ }
+  }
+  models = new Models(modelsDir);
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["media", "clipboard-sanitized-write", "fullscreen"].includes(permission)));
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => ["media", "clipboard-sanitized-write", "fullscreen"].includes(permission));
   baseUrl = await startServer();

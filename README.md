@@ -1,11 +1,11 @@
-# FlashDisplay
+# AMIDisplay
 
-FlashDisplay listens to the sermon, works out which Bible verse the preacher is reading, quoting or paraphrasing, and gets the **KJV** text ready to put on the projector with one key press.
+AMIDisplay listens to the sermon, works out which Bible verse the preacher is reading, quoting or paraphrasing, and gets the **KJV** text ready to put on the projector with one key press.
 
 It catches verses three ways:
 
 - **Spoken references.** "John three sixteen", "Romans chapter 8 verse 28", "first Corinthians thirteen four", "Psalm 23", and follow-ups like "look at verse seven".
-- **Quotes in any translation.** The preacher reads from the NIV, NLT or NKJV, and FlashDisplay still shows the KJV verse.
+- **Quotes in any translation.** The preacher reads from the NIV, NLT or NKJV, and AMIDisplay still shows the KJV verse.
 - **Paraphrase.** "Don't worry about anything, pray about everything" finds Philippians 4:6.
 
 Nothing goes on screen until the media desk presses **Show** (or Enter), unless you turn on automatic showing in Settings.
@@ -25,9 +25,9 @@ Everything else (verse matching, the console, the projector looks) is the same c
 
 **Install**
 
-1. Download `FlashDisplay-Setup.exe` from this repo's **Releases** page, or from the latest run under **Actions → Windows installer** (scroll to "Artifacts").
+1. Download `AMIDisplay-Setup.exe` from this repo's **Releases** page, or from the latest run under **Actions → Windows installer** (scroll to "Artifacts").
 2. Run it. Windows may warn that the app is from an unknown publisher; choose **More info → Run anyway**. (The installer isn't code-signed yet.)
-3. Open FlashDisplay, go to **Settings**, and press **Download Accurate**. It's a one-time download of about 480 MB. After that, the internet can be switched off.
+3. Open AMIDisplay, go to **Settings**, and press **Download Accurate**. It's a one-time download of about 480 MB. After that, the internet can be switched off.
 
 **No internet at the church at all?** On any computer with internet, download the model file directly:
 
@@ -89,8 +89,8 @@ Either way, allow the microphone when Chrome asks.
 
 Two ways, depending on how your setup works:
 
-- **Keep EasyWorship as the projector.** Use FlashDisplay as the spotter: press **Copy reference**, paste it into EasyWorship's scripture search, and go live from EasyWorship.
-- **Let FlashDisplay drive the screen for scripture.** Put the FlashDisplay screen window on the projector output. The **Lower third** and **Green screen** looks are made for livestream overlays.
+- **Keep EasyWorship as the projector.** Use AMIDisplay as the spotter: press **Copy reference**, paste it into EasyWorship's scripture search, and go live from EasyWorship.
+- **Let AMIDisplay drive the screen for scripture.** Put the AMIDisplay screen window on the projector output. The **Lower third** and **Green screen** looks are made for livestream overlays.
 
 ### Screen looks
 
@@ -98,9 +98,9 @@ Settings has five looks: Evening (default), Black, Daylight (for bright halls), 
 
 ## Helping it hear your preacher
 
-Chrome's speech recognition can't be trained, so FlashDisplay works around its mistakes:
+Chrome's speech recognition can't be trained, so AMIDisplay works around its mistakes:
 
-- **Backup guesses.** For every sentence Chrome gives up to four guesses. If the top guess missed a reference but a backup heard "Philippians 4:6", FlashDisplay still finds it.
+- **Backup guesses.** For every sentence Chrome gives up to four guesses. If the top guess missed a reference but a backup heard "Philippians 4:6", AMIDisplay still finds it.
 - **Misheard book names.** "Philippines 4:13", "a fusions 6:10", "Isaiah's 53", "have a cook 2:3", "Filipians 4 6" and similar are repaired, but only when a chapter and verse follow. "I visited the Philippines" is left alone.
 - **Accented numbers.** "John chapter tree verse sixteen", "Psalm twenty tree", "Hebrews 11 verse for" and "Romans 8 versus 28" all work.
 - **Book-name boosting.** In Chrome versions that support it, recognition is nudged toward Bible book names.
@@ -114,7 +114,7 @@ Press **Play sample sermon**. It plays a short sermon through the same pipeline 
 ## How the matching works
 
 - `src/engine/references.js` reads references out of speech. It turns spoken numbers into digits, knows the ways people say each book ("first John", "Song of Songs", "Revelations"), checks every chapter and verse actually exists, and remembers the last reference so "verse 17" means the right chapter.
-- `src/engine/matcher.js` compares what was said with every verse in **three translations at once**: KJV, plus two modern public-domain translations, the Berean Standard Bible and the New Heart English Bible. A modern quote or paraphrase matches the modern wording of a verse, and FlashDisplay shows that verse in KJV. It scores both shared words (weighted so "shepherd" counts more than "Lord") and word-for-word stretches, so short quotes like "I can do all things" still land.
+- `src/engine/matcher.js` compares what was said with every verse in **three translations at once**: KJV, plus two modern public-domain translations, the Berean Standard Bible and the New Heart English Bible. A modern quote or paraphrase matches the modern wording of a verse, and AMIDisplay shows that verse in KJV. It scores both shared words (weighted so "shepherd" counts more than "Lord") and word-for-word stretches, so short quotes like "I can do all things" still land.
 - It all runs in the browser, in a background worker. No sermon audio or text is sent anywhere except to Chrome's speech service.
 
 ## Development

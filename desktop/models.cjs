@@ -1,4 +1,4 @@
-// Offline speech models: which ones FlashDisplay can use, where they live, and how they get there.
+// Offline speech models: which ones AMIDisplay can use, where they live, and how they get there.
 // Models are downloaded once (or imported from a USB stick) into the app's data folder.
 
 const fs = require("node:fs");
@@ -86,7 +86,7 @@ class Models {
     const stat = fs.statSync(source);
     if (stat.isDirectory()) {
       const key = Object.keys(CATALOG).find((k) => path.basename(source) === CATALOG[k].folder);
-      if (!key) throw new Error(`That folder isn't a FlashDisplay speech model. Expected one named ${Object.values(CATALOG).map((m) => m.folder).join(" or ")}.`);
+      if (!key) throw new Error(`That folder isn't a AMIDisplay speech model. Expected one named ${Object.values(CATALOG).map((m) => m.folder).join(" or ")}.`);
       this.busy = { key, step: "unpack" };
       try {
         fs.cpSync(source, this.dir(key), { recursive: true });
@@ -95,7 +95,7 @@ class Models {
       } finally { this.busy = null; }
     }
     const key = Object.keys(CATALOG).find((k) => path.basename(source) === CATALOG[k].file);
-    if (!key) throw new Error(`That file isn't a FlashDisplay speech model. Expected ${Object.values(CATALOG).map((m) => m.file).join(" or ")}.`);
+    if (!key) throw new Error(`That file isn't a AMIDisplay speech model. Expected ${Object.values(CATALOG).map((m) => m.file).join(" or ")}.`);
     this.busy = { key, step: "unpack" };
     try { await this.extract(key, source, onProgress); } finally { this.busy = null; }
     return key;

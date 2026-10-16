@@ -28,4 +28,4 @@ class Capture extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor("flashdisplay-capture", Capture);
+registerProcessor("amidisplay-capture", Capture);

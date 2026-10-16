@@ -29,7 +29,7 @@ const els = {
 // ---------------------------------------------------------------------------
 // Settings
 
-const SETTINGS_KEY = "flashdisplay:settings";
+const SETTINGS_KEY = "amidisplay:settings";
 const settings = {
   lang: "en-NG",
   auto: "off",
@@ -40,7 +40,8 @@ const settings = {
   ...loadSettings(),
 };
 function loadSettings() {
-  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+  // Settings saved before the rename to AMIDisplay are picked up once.
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || localStorage.getItem("flashdisplay:settings")) || {}; } catch { return {}; }
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
@@ -84,13 +85,13 @@ worker.onmessage = (e) => {
     bible = new Bible({ books: msg.books, kjv: msg.kjv });
     els.search.disabled = false;
     els.listen.disabled = !canListen();
-    setStatus(canListen() ? "Spoken references ready. Matching quotes in a moment." : "This browser can't listen. Open FlashDisplay in Google Chrome.", canListen() ? "" : "warn");
+    setStatus(canListen() ? "Spoken references ready. Matching quotes in a moment." : "This browser can't listen. Open AMIDisplay in Google Chrome.", canListen() ? "" : "warn");
     pushScreen();
   } else if (msg.type === "ready") {
     ready = true;
     els.sample.disabled = false;
     els.loading.remove();
-    if (!listener.want && !rehearsal.playing) setStatus(canListen() ? "Ready when the preacher is." : "This browser can't listen. Open FlashDisplay in Google Chrome.", canListen() ? "" : "warn");
+    if (!listener.want && !rehearsal.playing) setStatus(canListen() ? "Ready when the preacher is." : "This browser can't listen. Open AMIDisplay in Google Chrome.", canListen() ? "" : "warn");
     renderSuggestions();
   } else if (msg.type === "match") {
     pending.get(msg.id)?.(msg.results);
@@ -361,11 +362,11 @@ function transcriptText() {
 function sessionText() {
   const date = new Date(session.started);
   const lines = [
-    `FlashDisplay session, ${date.toLocaleString()}`,
+    `AMIDisplay session, ${date.toLocaleString()}`,
     `Accent setting: ${settings.lang}. Book-name boosting: ${listener.boosting ? "on" : "not supported in this browser"}.`,
     "",
     "VERSES",
-    "Shown from search means FlashDisplay missed it. Those are the most useful lines for tuning.",
+    "Shown from search means AMIDisplay missed it. Those are the most useful lines for tuning.",
     "",
   ];
   for (const e of session.events) {
@@ -394,7 +395,7 @@ els.copyTranscript.addEventListener("click", async () => {
 els.saveSession.addEventListener("click", () => {
   if (!segments.length && !session.events.length) { toast("Nothing to save yet"); return; }
   const d = new Date(session.started);
-  const name = `FlashDisplay ${d.toISOString().slice(0, 10)} ${String(d.getHours()).padStart(2, "0")}-${String(d.getMinutes()).padStart(2, "0")}.txt`;
+  const name = `AMIDisplay ${d.toISOString().slice(0, 10)} ${String(d.getHours()).padStart(2, "0")}-${String(d.getMinutes()).padStart(2, "0")}.txt`;
   const url = URL.createObjectURL(new Blob([sessionText()], { type: "text/plain" }));
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
@@ -674,7 +675,7 @@ els.openScreen.addEventListener("click", async () => {
     toast(r.onProjector ? `Projector screen is on ${r.name}` : "No projector found, so the screen opened in a window. Connect the projector, then press this again.");
     return;
   }
-  const w = window.open("display.html", "flashdisplay-screen", "popup,width=1280,height=720");
+  const w = window.open("display.html", "amidisplay-screen", "popup,width=1280,height=720");
   if (!w) toast("Your browser blocked the window. Allow pop-ups for this page and try again.");
   else toast("Drag the new window to the projector, then double-click it for full screen.");
 });
@@ -853,7 +854,7 @@ els.models?.addEventListener("click", async (e) => {
       await desktop.downloadModel(key);
       settings.model = key;
       saveSettings();
-      toast("Speech model installed. FlashDisplay can now listen without internet.");
+      toast("Speech model installed. AMIDisplay can now listen without internet.");
     } catch (err) {
       toast(cleanError(err));
     }
